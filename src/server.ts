@@ -1,6 +1,7 @@
 import 'express-async-errors';
 import express, { NextFunction, Request, Response } from 'express';
 import { migrate, pool } from './db';
+import { authRouter } from './auth/router';
 
 const app = express();
 app.use(express.json());
@@ -14,6 +15,7 @@ app.get('/health', async (_req: Request, res: Response) => {
   }
 });
 
+app.use('/auth', authRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'route not found' });
