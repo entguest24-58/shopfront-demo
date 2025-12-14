@@ -1,5 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { pool } from '../db';
+import { AuthedRequest, requireAdmin, requireAuth } from '../auth/tokens';
 
 export const productsRouter = Router();
 
@@ -59,4 +60,71 @@ productsRouter.get('/:id', async (req: Request, res: Response) => {
     return;
   }
   res.json(toProduct(rows[0]));
+});
+
+productsRouter.post('/', requireAuth, requireAdmin, async (req: AuthedRequest, res: Response) => {
+  const { sku, name, description = '', category, price_cents, stock = 0 } = req.body ?? {};
+  if (typeof sku !== 'string' || !sku.trim() || typeof name !== 'string' || !name.trim() || typeof category !== 'string' || !category.trim()) {
+    res.status(400).json({ error: 'sku, name and category are required' });
+    return;
+  }
+  if (!Number.isInteger(price_cents) || price_cents < 0 || !Number.isInteger(stock) || stock < 0) {
+    res.status(400).json({ error: 'price_cents and stock must be non-negative integers' });
+    return;
+  }
+  try {
+    const { rows } = await pool.query<ProductRow>(
+      `INSERT INTO products (sku, name, description, category, price_cents, stock)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [sku.trim(), name.trim(), String(description), category.trim(), price_cents, stock],
+    );
+    res.status(201).json(toProduct(rows[0]));
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') {
+      res.status(409).json({ error: 'sku already exists' });
+      return;
+    }
+    throw err;
+  }
+});
+
+productsRouter.patch('/:id', requireAuth, requireAdmin, async (req: AuthedRequest, res: Response) => {
+  const id = Number(req.params.id);
+  const { name, description, category, price_cents, stock } = req.body ?? {};
+  if (price_cents !== undefined && (!Number.isInteger(price_cents) || price_cents < 0)) {
+    res.status(400).json({ error: 'price_cents must be a non-negative integer' });
+    return;
+  }
+  if (stock !== undefined && (!Number.isInteger(stock) || stock < 0)) {
+    res.status(400).json({ error: 'stock must be a non-negative integer' });
+    return;
+  }
+  const { rows } = await pool.query<ProductRow>(
+    `UPDATE products SET
+       name = COALESCE($2, name),
+       description = COALESCE($3, description),
+       category = COALESCE($4, category),
+       price_cents = COALESCE($5, price_cents),
+       stock = COALESCE($6, stock),
+       updated_at = now()
+     WHERE id = $1 AND active = true
+     RETURNING *`,
+    [id, name ?? null, description ?? null, category ?? null, price_cents ?? null, stock ?? null],
+  );
+  if (rows.length === 0) {
+    res.status(404).json({ error: 'product not found' });
+    return;
+  }
+  res.json(toProduct(rows[0]));
+});
+
+/** Removing a product hides it from the catalog; past orders keep their copy of it. */
+productsRouter.delete('/:id', requireAuth, requireAdmin, async (req: AuthedRequest, res: Response) => {
+  const id = Number(req.params.id);
+  const { rowCount } = await pool.query('UPDATE products SET active = false, updated_at = now() WHERE id = $1 AND active = true', [id]);
+  if (!rowCount) {
+    res.status(404).json({ error: 'product not found' });
+    return;
+  }
+  res.status(204).end();
 });
