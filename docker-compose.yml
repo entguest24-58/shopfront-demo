@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: shopfront
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d shopfront"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://app:app@db:5432/shopfront
+      JWT_SECRET: local-dev-secret-change-me
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
