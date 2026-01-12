@@ -20,6 +20,14 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS cart_items (
+  user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id INTEGER     NOT NULL REFERENCES products(id),
+  quantity   INTEGER     NOT NULL CHECK (quantity > 0),
+  added_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, product_id)
+);
+
 -- Starter catalog so a fresh environment has something to browse.
 INSERT INTO products (sku, name, description, category, price_cents, stock)
 SELECT
