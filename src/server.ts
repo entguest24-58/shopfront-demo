@@ -5,6 +5,7 @@ import { authRouter } from './auth/router';
 import { productsRouter } from './products/router';
 import { cartRouter } from './cart/router';
 import { checkoutRouter } from './checkout/router';
+import { ordersRouter } from './orders/router';
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,7 @@ app.use('/auth', authRouter);
 app.use('/products', productsRouter);
 app.use('/cart', cartRouter);
 app.use('/checkout', checkoutRouter);
+app.use('/orders', ordersRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'route not found' });
