@@ -28,6 +28,25 @@ CREATE TABLE IF NOT EXISTS cart_items (
   PRIMARY KEY (user_id, product_id)
 );
 
+CREATE TABLE IF NOT EXISTS orders (
+  id             SERIAL PRIMARY KEY,
+  user_id        INTEGER     NOT NULL REFERENCES users(id),
+  status         TEXT        NOT NULL DEFAULT 'placed',
+  subtotal_cents INTEGER     NOT NULL,
+  tax_cents      INTEGER     NOT NULL,
+  total_cents    INTEGER     NOT NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  order_id         INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  product_id       INTEGER NOT NULL REFERENCES products(id),
+  name             TEXT    NOT NULL,
+  unit_price_cents INTEGER NOT NULL,
+  quantity         INTEGER NOT NULL,
+  PRIMARY KEY (order_id, product_id)
+);
+
 -- Starter catalog so a fresh environment has something to browse.
 INSERT INTO products (sku, name, description, category, price_cents, stock)
 SELECT

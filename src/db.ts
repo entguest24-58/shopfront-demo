@@ -15,3 +15,19 @@ export async function migrate(): Promise<void> {
   const sql = readFileSync(schemaPath, 'utf8');
   await pool.query(sql);
 }
+
+/** Runs fn inside a transaction; rolls back on any thrown error. */
+export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
