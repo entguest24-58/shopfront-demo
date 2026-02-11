@@ -1,6 +1,7 @@
 import { Response, Router } from 'express';
 import { withTransaction } from '../db';
 import { AuthedRequest, requireAuth } from '../auth/tokens';
+import { findCoupon, normalizeCode } from '../coupons/catalog';
 import { computeTotals } from './pricing';
 
 export const checkoutRouter = Router();
@@ -23,6 +24,12 @@ interface CartLine {
 /** Checkout: turns the signed-in customer's cart into an order. */
 checkoutRouter.post('/', async (req: AuthedRequest, res: Response) => {
   const userId = req.user!.id;
+  const couponCode = normalizeCode(req.body?.coupon_code);
+  const coupon = couponCode ? findCoupon(couponCode) : undefined;
+  if (couponCode && !coupon) {
+    res.status(422).json({ error: 'unknown coupon code' });
+    return;
+  }
 
   try {
     const order = await withTransaction(async (client) => {
@@ -43,12 +50,15 @@ checkoutRouter.post('/', async (req: AuthedRequest, res: Response) => {
         });
       }
 
-      const totals = computeTotals(lines);
+      const totals = computeTotals(lines, coupon?.percentOff ?? 0);
+      if (coupon && totals.subtotal_cents < coupon.minSubtotalCents) {
+        throw new CheckoutError(422, 'coupon requires a higher subtotal', { min_subtotal_cents: coupon.minSubtotalCents });
+      }
 
       const { rows } = await client.query<{ id: number; created_at: Date }>(
-        `INSERT INTO orders (user_id, subtotal_cents, tax_cents, total_cents)
-         VALUES ($1, $2, $3, $4) RETURNING id, created_at`,
-        [userId, totals.subtotal_cents, totals.tax_cents, totals.total_cents],
+        `INSERT INTO orders (user_id, subtotal_cents, discount_cents, tax_cents, total_cents, coupon_code)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
+        [userId, totals.subtotal_cents, totals.discount_cents, totals.tax_cents, totals.total_cents, couponCode],
       );
       const orderId = rows[0].id;
       for (const l of lines) {
@@ -71,6 +81,7 @@ checkoutRouter.post('/', async (req: AuthedRequest, res: Response) => {
           line_total_cents: l.price_cents * l.quantity,
         })),
         ...totals,
+        coupon_code: couponCode,
         created_at: rows[0].created_at,
       };
     });

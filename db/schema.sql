@@ -33,8 +33,10 @@ CREATE TABLE IF NOT EXISTS orders (
   user_id        INTEGER     NOT NULL REFERENCES users(id),
   status         TEXT        NOT NULL DEFAULT 'placed',
   subtotal_cents INTEGER     NOT NULL,
+  discount_cents INTEGER     NOT NULL DEFAULT 0,
   tax_cents      INTEGER     NOT NULL,
   total_cents    INTEGER     NOT NULL,
+  coupon_code    TEXT,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
