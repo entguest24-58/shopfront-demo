@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "ts-node-dev --respawn src/server.ts"
   },
   "engines": {
