@@ -61,12 +61,12 @@ cartRouter.post('/items', async (req: AuthedRequest, res: Response) => {
     return;
   }
 
-  const existing = await pool.query('SELECT quantity FROM cart_items WHERE user_id = $1 AND product_id = $2', [req.user!.id, product_id]);
-  if (existing.rows.length > 0) {
-    await pool.query('UPDATE cart_items SET quantity = quantity + $3 WHERE user_id = $1 AND product_id = $2', [req.user!.id, product_id, quantity]);
-  } else {
-    await pool.query('INSERT INTO cart_items (user_id, product_id, quantity) VALUES ($1, $2, $3)', [req.user!.id, product_id, quantity]);
-  }
+  await pool.query(
+    `INSERT INTO cart_items (user_id, product_id, quantity)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id, product_id) DO UPDATE SET quantity = EXCLUDED.quantity`,
+    [req.user!.id, product_id, quantity],
+  );
   res.status(201).json(await loadCart(req.user!.id));
 });
 
