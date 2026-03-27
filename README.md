@@ -23,3 +23,10 @@ The schema (`db/schema.sql`) is applied on startup and seeds a starter catalog o
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `JWT_SECRET` | yes | secret used to sign access tokens |
 | `PORT` | no | listen port (default `3000`) |
+
+## Coupon codes
+
+| Code | Discount | Minimum subtotal |
+|---|---|---|
+| `SAVE10` | 10% | $50.00 |
+| `WELCOME15` | 15% | $100.00 |
