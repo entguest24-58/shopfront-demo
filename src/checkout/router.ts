@@ -37,13 +37,14 @@ checkoutRouter.post('/', async (req: AuthedRequest, res: Response) => {
         `SELECT c.product_id, p.name, p.price_cents, p.stock, c.quantity
            FROM cart_items c JOIN products p ON p.id = c.product_id
           WHERE c.user_id = $1
-          ORDER BY c.product_id`,
+          ORDER BY c.product_id
+          FOR UPDATE OF p`,
         [userId],
       );
       if (lines.length === 0) {
         throw new CheckoutError(400, 'cart is empty');
       }
-      const short = lines.filter((l) => l.quantity > l.stock);
+      const short = lines.filter((l) => l.stock <= 0);
       if (short.length > 0) {
         throw new CheckoutError(409, 'not enough stock', {
           items: short.map((l) => ({ product_id: l.product_id, requested: l.quantity, available: l.stock })),
