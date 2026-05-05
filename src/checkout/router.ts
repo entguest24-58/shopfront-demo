@@ -44,7 +44,7 @@ checkoutRouter.post('/', async (req: AuthedRequest, res: Response) => {
       if (lines.length === 0) {
         throw new CheckoutError(400, 'cart is empty');
       }
-      const short = lines.filter((l) => l.stock <= 0);
+      const short = lines.filter((l) => l.quantity > l.stock);
       if (short.length > 0) {
         throw new CheckoutError(409, 'not enough stock', {
           items: short.map((l) => ({ product_id: l.product_id, requested: l.quantity, available: l.stock })),
