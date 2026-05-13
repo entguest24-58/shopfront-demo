@@ -4,6 +4,7 @@ import { AuthedRequest, requireAdmin, requireAuth } from '../auth/tokens';
 
 export const productsRouter = Router();
 
+const DEFAULT_PAGE_SIZE = 20;
 
 interface ProductRow {
   id: number;
@@ -41,11 +42,28 @@ productsRouter.get('/', async (req: Request, res: Response) => {
     params.push(`%${q}%`);
     where.push(`name LIKE $${params.length}`);
   }
+  const category = typeof req.query.category === 'string' ? req.query.category.trim() : '';
+  if (category) {
+    params.push(category);
+    where.push(`category = $${params.length}`);
+  }
+
+  const page = Number(req.query.page ?? 1);
+  const pageSize = Number(req.query.page_size ?? DEFAULT_PAGE_SIZE);
+  const offset = (page - 1) * pageSize;
+
+  const filter = where.join(' AND ');
+  const total = await pool.query<{ count: string }>(`SELECT count(*) FROM products WHERE ${filter}`, params);
   const { rows } = await pool.query<ProductRow>(
-    `SELECT * FROM products WHERE ${where.join(' AND ')} ORDER BY name, id LIMIT 50`,
-    params,
+    `SELECT * FROM products WHERE ${filter} ORDER BY name, id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, pageSize, offset],
   );
-  res.json({ items: rows.map(toProduct) });
+  res.json({
+    items: rows.map(toProduct),
+    page,
+    page_size: pageSize,
+    total: Number(total.rows[0].count),
+  });
 });
 
 productsRouter.get('/:id', async (req: Request, res: Response) => {
