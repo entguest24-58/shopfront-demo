@@ -5,6 +5,7 @@ import { AuthedRequest, requireAdmin, requireAuth } from '../auth/tokens';
 export const productsRouter = Router();
 
 const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
 
 interface ProductRow {
   id: number;
@@ -48,8 +49,9 @@ productsRouter.get('/', async (req: Request, res: Response) => {
     where.push(`category = $${params.length}`);
   }
 
-  const page = Number(req.query.page ?? 1);
-  const pageSize = Number(req.query.page_size ?? DEFAULT_PAGE_SIZE);
+  const page = Math.max(1, Math.floor(Number(req.query.page ?? 1)) || 1);
+  const requested = Math.floor(Number(req.query.page_size ?? DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE;
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, requested));
   const offset = (page - 1) * pageSize;
 
   const filter = where.join(' AND ');
