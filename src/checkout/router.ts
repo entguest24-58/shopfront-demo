@@ -57,9 +57,9 @@ checkoutRouter.post('/', async (req: AuthedRequest, res: Response) => {
       }
 
       const { rows } = await client.query<{ id: number; created_at: Date }>(
-        `INSERT INTO orders (user_id, subtotal_cents, discount_cents, tax_cents, total_cents, coupon_code)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
-        [userId, totals.subtotal_cents, totals.discount_cents, totals.tax_cents, totals.total_cents, couponCode],
+        `INSERT INTO orders (user_id, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents, coupon_code)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`,
+        [userId, totals.subtotal_cents, totals.discount_cents, totals.shipping_cents, totals.tax_cents, totals.total_cents, couponCode],
       );
       const orderId = rows[0].id;
       for (const l of lines) {
