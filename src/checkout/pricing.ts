@@ -19,7 +19,7 @@ export interface Totals {
 export function computeTotals(lines: PricedLine[], percentOff = 0): Totals {
   const subtotal = lines.reduce((sum, l) => sum + l.price_cents * l.quantity, 0);
   const discount = Math.round((subtotal * percentOff) / 100);
-  const shipping = subtotal >= FREE_SHIPPING_MIN_CENTS ? 0 : SHIPPING_CENTS;
+  const shipping = subtotal - discount >= FREE_SHIPPING_MIN_CENTS ? 0 : SHIPPING_CENTS;
   const tax = Math.round((subtotal - discount) * TAX_RATE);
   return {
     subtotal_cents: subtotal,
