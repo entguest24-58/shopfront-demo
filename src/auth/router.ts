@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { Request, Response, Router } from 'express';
 import { pool } from '../db';
+import { normalizeEmail } from './email';
 import { AuthedRequest, requireAuth, signToken } from './tokens';
 
 export const authRouter = Router();
@@ -38,7 +39,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     return;
   }
 
-  const storedEmail = email.trim().toLowerCase();
+  const storedEmail = normalizeEmail(email);
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   try {
     const { rows } = await pool.query<UserRow>(
@@ -68,7 +69,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     return;
   }
 
-  const { rows } = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [email.trim().toLowerCase()]);
+  const { rows } = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [email.trim()]);
   const user = rows[0];
   const ok = user ? await bcrypt.compare(password, user.password_hash) : false;
   if (!user || !ok) {
