@@ -69,7 +69,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
     return;
   }
 
-  const { rows } = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [email.trim()]);
+  const { rows } = await pool.query<UserRow>('SELECT * FROM users WHERE email = $1', [normalizeEmail(email)]);
   const user = rows[0];
   const ok = user ? await bcrypt.compare(password, user.password_hash) : false;
   if (!user || !ok) {
