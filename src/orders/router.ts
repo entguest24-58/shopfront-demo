@@ -5,6 +5,15 @@ import { AuthedRequest, requireAuth } from '../auth/tokens';
 export const ordersRouter = Router();
 ordersRouter.use(requireAuth);
 
+/** The signed-in customer's orders, newest first. */
+ordersRouter.get('/', async (req: AuthedRequest, res: Response) => {
+  const { rows } = await pool.query(
+    'SELECT id, status, total_cents, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC, id DESC',
+    [req.user!.id],
+  );
+  res.json({ items: rows });
+});
+
 ordersRouter.get('/:id', async (req: AuthedRequest, res: Response) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) {
