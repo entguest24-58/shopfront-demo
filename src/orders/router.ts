@@ -31,3 +31,21 @@ ordersRouter.get('/:id', async (req: AuthedRequest, res: Response) => {
   );
   res.json({ ...rows[0], items: items.rows });
 });
+
+/** A customer can cancel their own order while it is still being prepared. */
+ordersRouter.post('/:id/cancel', async (req: AuthedRequest, res: Response) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: 'id must be a positive integer' });
+    return;
+  }
+  const { rows } = await pool.query(
+    "UPDATE orders SET status = 'cancelled', cancelled_at = now() WHERE id = $1 AND user_id = $2 RETURNING id, status, cancelled_at",
+    [id, req.user!.id],
+  );
+  if (rows.length === 0) {
+    res.status(404).json({ error: 'order not found' });
+    return;
+  }
+  res.json(rows[0]);
+});

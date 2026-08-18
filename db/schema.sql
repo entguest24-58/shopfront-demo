@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS orders (
   tax_cents      INTEGER     NOT NULL,
   total_cents    INTEGER     NOT NULL,
   coupon_code    TEXT,
+  cancelled_at   TIMESTAMPTZ,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
