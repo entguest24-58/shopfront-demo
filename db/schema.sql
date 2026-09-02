@@ -51,6 +51,17 @@ CREATE TABLE IF NOT EXISTS order_items (
   PRIMARY KEY (order_id, product_id)
 );
 
+CREATE TABLE IF NOT EXISTS reviews (
+  id         SERIAL PRIMARY KEY,
+  product_id INTEGER     NOT NULL REFERENCES products(id),
+  user_id    INTEGER     NOT NULL REFERENCES users(id),
+  rating     INTEGER     NOT NULL,
+  comment    TEXT        NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (product_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews (product_id);
+
 -- Starter catalog so a fresh environment has something to browse.
 INSERT INTO products (sku, name, description, category, price_cents, stock)
 SELECT

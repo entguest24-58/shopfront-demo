@@ -7,6 +7,7 @@ import { cartRouter } from './cart/router';
 import { checkoutRouter } from './checkout/router';
 import { couponsRouter } from './coupons/router';
 import { ordersRouter } from './orders/router';
+import { reviewsRouter } from './reviews/router';
 
 const app = express();
 app.use(express.json());
@@ -21,6 +22,7 @@ app.get('/health', async (_req: Request, res: Response) => {
 });
 
 app.use('/auth', authRouter);
+app.use('/products/:productId/reviews', reviewsRouter);
 app.use('/products', productsRouter);
 app.use('/cart', cartRouter);
 app.use('/checkout', checkoutRouter);
