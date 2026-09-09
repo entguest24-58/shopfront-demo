@@ -39,13 +39,18 @@ ordersRouter.post('/:id/cancel', async (req: AuthedRequest, res: Response) => {
     res.status(400).json({ error: 'id must be a positive integer' });
     return;
   }
-  const { rows } = await pool.query(
-    "UPDATE orders SET status = 'cancelled', cancelled_at = now() WHERE id = $1 AND user_id = $2 RETURNING id, status, cancelled_at",
-    [id, req.user!.id],
-  );
-  if (rows.length === 0) {
+  const found = await pool.query<{ status: string }>('SELECT status FROM orders WHERE id = $1 AND user_id = $2', [id, req.user!.id]);
+  if (found.rows.length === 0) {
     res.status(404).json({ error: 'order not found' });
     return;
   }
+  if (found.rows[0].status !== 'placed') {
+    res.status(409).json({ error: 'order can no longer be cancelled', status: found.rows[0].status });
+    return;
+  }
+  const { rows } = await pool.query(
+    "UPDATE orders SET status = 'cancelled', cancelled_at = now() WHERE id = $1 AND user_id = $2 AND status = 'placed' RETURNING id, status, cancelled_at",
+    [id, req.user!.id],
+  );
   res.json(rows[0]);
 });
