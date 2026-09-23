@@ -17,10 +17,13 @@ export interface Totals {
 
 /** Order totals in integer cents. */
 export function computeTotals(lines: PricedLine[], percentOff = 0): Totals {
-  const subtotal = lines.reduce((sum, l) => sum + l.price_cents * l.quantity, 0);
+  let subtotal = 0;
+  for (const l of lines) {
+    subtotal += l.price_cents * l.quantity;
+  }
   const discount = Math.round((subtotal * percentOff) / 100);
   const shipping = subtotal - discount >= FREE_SHIPPING_MIN_CENTS ? 0 : SHIPPING_CENTS;
-  const tax = Math.round((subtotal - discount) * TAX_RATE);
+  const tax = Math.round(subtotal * TAX_RATE);
   return {
     subtotal_cents: subtotal,
     discount_cents: discount,
