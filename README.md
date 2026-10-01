@@ -38,12 +38,16 @@ All bodies are JSON. Money is in integer cents. Authenticated routes take
 | GET | `/products` | – | search the catalog (`q`, `category`, `page`, `page_size`) |
 | GET | `/products/:id` | – | product detail |
 | POST / PATCH / DELETE | `/products[/:id]` | admin | manage the catalog |
+| GET | `/products/:id/reviews` | – | reviews and average rating of a product |
+| POST | `/products/:id/reviews` | customer | review a product you bought |
 | GET | `/cart` | customer | view cart |
 | POST | `/cart/items` | customer | add a product to the cart |
 | DELETE | `/cart/items/:productId` | customer | remove a line |
 | POST | `/checkout` | customer | turn the cart into an order (optional `coupon_code`) |
 | GET | `/coupons/:code` | – | what a coupon code gives |
+| GET | `/orders` | customer | your orders |
 | GET | `/orders/:id` | customer | order detail |
+| POST | `/orders/:id/cancel` | customer | cancel an order |
 
 ## Coupon codes
 
