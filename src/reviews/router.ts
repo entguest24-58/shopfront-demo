@@ -34,8 +34,8 @@ reviewsRouter.post('/', requireAuth, async (req: AuthedRequest, res: Response) =
     return;
   }
   const { rating, comment = '' } = req.body ?? {};
-  if (!Number.isInteger(rating)) {
-    res.status(400).json({ error: 'rating must be a whole number' });
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    res.status(400).json({ error: 'rating must be a whole number from 1 to 5' });
     return;
   }
   const bought = await pool.query(
