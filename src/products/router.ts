@@ -108,6 +108,20 @@ productsRouter.post('/', requireAuth, requireAdmin, async (req: AuthedRequest, r
   }
 });
 
+/** Changes the price of every product in a category by a percentage. */
+productsRouter.post('/bulk-price', requireAuth, requireAdmin, async (req: AuthedRequest, res: Response) => {
+  const { category, percent } = req.body ?? {};
+  if (typeof category !== 'string' || !category.trim() || typeof percent !== 'number') {
+    res.status(400).json({ error: 'category and percent are required' });
+    return;
+  }
+  const { rowCount } = await pool.query(
+    'UPDATE products SET price_cents = price_cents + price_cents * $2 / 100, updated_at = now() WHERE category = $1',
+    [category.trim(), percent],
+  );
+  res.json({ updated: rowCount ?? 0 });
+});
+
 productsRouter.patch('/:id', requireAuth, requireAdmin, async (req: AuthedRequest, res: Response) => {
   const id = Number(req.params.id);
   const { name, description, category, price_cents, stock } = req.body ?? {};
