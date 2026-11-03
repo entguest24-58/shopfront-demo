@@ -48,6 +48,7 @@ All bodies are JSON. Money is in integer cents. Authenticated routes take
 | GET | `/orders` | customer | your orders |
 | GET | `/orders/:id` | customer | order detail |
 | POST | `/orders/:id/cancel` | customer | cancel an order |
+| GET | `/admin/inventory/low-stock` | admin | products running low (`threshold`) |
 
 ## Coupon codes
 
