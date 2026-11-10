@@ -89,3 +89,32 @@ authRouter.get('/me', requireAuth, async (req: AuthedRequest, res: Response) => 
   }
   res.json(publicUser(rows[0]));
 });
+
+const PROFILE_READ_ONLY = ['id', 'password_hash', 'created_at'];
+
+/** A signed-in customer updates their own profile. */
+authRouter.patch('/me', requireAuth, async (req: AuthedRequest, res: Response) => {
+  const changes = Object.entries(req.body ?? {}).filter(([field]) => !PROFILE_READ_ONLY.includes(field));
+  if (changes.length === 0) {
+    res.status(400).json({ error: 'nothing to update' });
+    return;
+  }
+  if (changes.some(([field, value]) => !/^[a-z_]+$/.test(field) || typeof value !== 'string' || !value.trim())) {
+    res.status(400).json({ error: 'profile fields must be non-empty text' });
+    return;
+  }
+  const assignments = changes.map(([field], i) => `${field} = $${i + 2}`).join(', ');
+  try {
+    const { rows } = await pool.query<UserRow>(
+      `UPDATE users SET ${assignments} WHERE id = $1 RETURNING *`,
+      [req.user!.id, ...changes.map(([, value]) => (value as string).trim())],
+    );
+    res.json(publicUser(rows[0]));
+  } catch (err) {
+    if ((err as { code?: string }).code === '42703') {
+      res.status(400).json({ error: 'unknown profile field' });
+      return;
+    }
+    throw err;
+  }
+});
