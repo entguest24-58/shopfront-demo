@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source "${CODEVALID_ROOT:-.}/.codevalid/lib/cv.sh"
+
+BASE_URL="${BASE_URL:-http://app:6713}"
+DATABASE_URL="${DATABASE_URL:-postgresql://app:app@toxiproxy:5432/appdb}"
+export BASE_URL DATABASE_URL
+SUFFIX="$(date +%s%N)"
+PASSWORD="SecretPw${SUFFIX: -8}"
+WRONG_PASSWORD="WrongSecret${SUFFIX: -8}"
+EMAIL="cv_nopw_${SUFFIX}@example.com"
+CREATED_USER_IDS=()
+
+sql() { psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAq -c "$1"; }
+cleanup_all() {
+  local u
+  for u in "${CREATED_USER_IDS[@]:-}"; do
+    [ -n "$u" ] && sql "DELETE FROM users WHERE id = $u;" >/dev/null || true
+  done
+}
+trap cleanup_all EXIT
+
+# no_secret <label> -> fails if the last response (headers or body) contains a password or hash
+no_secret() {
+  local all
+  all="$(cat "$CV_HTTP_HEADERS_FILE" 2>/dev/null || true)$CV_HTTP_BODY"
+  case "$all" in *"$PASSWORD"*) cv_fail "expected $1 response not to contain the password, it did" $LINENO ;; esac
+  case "$all" in *"$WRONG_PASSWORD"*) cv_fail "expected $1 response not to contain the submitted wrong password, it did" $LINENO ;; esac
+  case "$all" in *"$HASH"*) cv_fail "expected $1 response not to contain the password hash, it did" $LINENO ;; esac
+  if printf '%s' "$CV_HTTP_BODY" | jq -e '[.. | objects | keys[] | ascii_downcase | select(test("password"))] | length > 0' >/dev/null 2>&1; then
+    cv_fail "expected $1 response to have no password field got $CV_HTTP_BODY" $LINENO
+  fi
+}
+
+# Given
+cv_step Given "a registered customer" $LINENO
+cv_http POST /auth/register "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\",\"name\":\"CV NoPw\"}"
+[ "$CV_HTTP_STATUS" = "201" ] || cv_fail "expected 201 registering $EMAIL got $CV_HTTP_STATUS" $LINENO
+USER_ID=$(printf '%s' "$CV_HTTP_BODY" | jq -r '.id')
+[[ "$USER_ID" =~ ^[0-9]+$ ]] || cv_fail "expected numeric user id got '$USER_ID'" $LINENO
+CREATED_USER_IDS+=("$USER_ID")
+HASH=$(sql "SELECT password_hash FROM users WHERE id = $USER_ID;")
+[ -n "$HASH" ] || cv_fail "expected a stored password hash got none" $LINENO
+
+# When
+cv_step When "the customer signs in successfully and then with a wrong password" $LINENO
+cv_http POST /auth/login "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
+OK_STATUS=$CV_HTTP_STATUS
+OK_BODY=$CV_HTTP_BODY
+no_secret "successful sign-in"
+cv_http POST /auth/login "{\"email\":\"$EMAIL\",\"password\":\"$WRONG_PASSWORD\"}"
+BAD_STATUS=$CV_HTTP_STATUS
+no_secret "refused sign-in"
+
+# Then
+cv_step Then "neither response nor the profile read returns the password" $LINENO
+[ "$OK_STATUS" = "200" ] || cv_fail "expected 200 on correct sign-in got $OK_STATUS" $LINENO
+[ "$BAD_STATUS" = "401" ] || cv_fail "expected 401 on wrong password got $BAD_STATUS" $LINENO
+TOKEN=$(printf '%s' "$OK_BODY" | jq -r '.token // empty')
+[ -n "$TOKEN" ] || cv_fail "expected a token from sign-in got none" $LINENO
+cv_http GET /auth/me "" 200 -H "Authorization: Bearer $TOKEN"
+no_secret "profile"
+
+# Cleanup
+cv_step Cleanup "delete the test user" $LINENO
+cleanup_all
+trap - EXIT
+echo "CODEVALID_TEST_ASSERTION_OK:api_98587047_5"
