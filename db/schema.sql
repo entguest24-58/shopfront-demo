@@ -62,6 +62,13 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 CREATE INDEX IF NOT EXISTS reviews_product_idx ON reviews (product_id);
 
+CREATE TABLE IF NOT EXISTS wishlist_items (
+  user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id INTEGER     NOT NULL REFERENCES products(id),
+  added_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, product_id)
+);
+
 -- Starter catalog so a fresh environment has something to browse.
 INSERT INTO products (sku, name, description, category, price_cents, stock)
 SELECT

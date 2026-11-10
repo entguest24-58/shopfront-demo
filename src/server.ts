@@ -9,6 +9,7 @@ import { couponsRouter } from './coupons/router';
 import { ordersRouter } from './orders/router';
 import { reviewsRouter } from './reviews/router';
 import { adminRouter } from './admin/router';
+import { wishlistRouter } from './wishlist/router';
 
 const app = express();
 app.use(express.json());
@@ -30,6 +31,7 @@ app.use('/checkout', checkoutRouter);
 app.use('/coupons', couponsRouter);
 app.use('/orders', ordersRouter);
 app.use('/admin', adminRouter);
+app.use('/wishlist', wishlistRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'route not found' });
