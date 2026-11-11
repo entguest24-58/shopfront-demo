@@ -35,6 +35,7 @@ All bodies are JSON. Money is in integer cents. Authenticated routes take
 | POST | `/auth/register` | – | create a customer account |
 | POST | `/auth/login` | – | exchange email + password for an access token |
 | GET | `/auth/me` | customer | the signed-in account |
+| PATCH | `/auth/me` | customer | change your profile |
 | GET | `/products` | – | search the catalog (`q`, `category`, `page`, `page_size`) |
 | GET | `/products/:id` | – | product detail |
 | POST / PATCH / DELETE | `/products[/:id]` | admin | manage the catalog |
