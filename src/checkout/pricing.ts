@@ -15,15 +15,24 @@ export interface Totals {
   total_cents: number;
 }
 
+function goodsTotal(lines: PricedLine[]): number {
+  return lines.reduce((sum, l) => sum + l.price_cents * l.quantity, 0);
+}
+
+function percentOf(amount: number, percent: number): number {
+  return Math.round((amount * percent) / 100);
+}
+
+function shippingFor(amount: number): number {
+  return amount >= FREE_SHIPPING_MIN_CENTS ? 0 : SHIPPING_CENTS;
+}
+
 /** Order totals in integer cents. */
 export function computeTotals(lines: PricedLine[], percentOff = 0): Totals {
-  let subtotal = 0;
-  for (const l of lines) {
-    subtotal += l.price_cents * l.quantity;
-  }
-  const discount = Math.round((subtotal * percentOff) / 100);
-  const shipping = subtotal - discount >= FREE_SHIPPING_MIN_CENTS ? 0 : SHIPPING_CENTS;
-  const tax = Math.round((subtotal - discount) * TAX_RATE);
+  const subtotal = goodsTotal(lines);
+  const tax = percentOf(subtotal, TAX_RATE * 100);
+  const discount = percentOf(subtotal, percentOff);
+  const shipping = shippingFor(subtotal - discount);
   return {
     subtotal_cents: subtotal,
     discount_cents: discount,
