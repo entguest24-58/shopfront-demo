@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { pool } from '../db';
 import { AuthedRequest, requireAdmin, requireAuth } from '../auth/tokens';
+import { ratingSummary } from '../reviews/summary';
 
 export const productsRouter = Router();
 
@@ -60,8 +61,12 @@ productsRouter.get('/', async (req: Request, res: Response) => {
     `SELECT * FROM products WHERE ${filter} ORDER BY name, id LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, pageSize, offset],
   );
+  const items = [];
+  for (const row of rows) {
+    items.push({ ...toProduct(row), ...(await ratingSummary(row.id)) });
+  }
   res.json({
-    items: rows.map(toProduct),
+    items,
     page,
     page_size: pageSize,
     total: Number(total.rows[0].count),
@@ -79,7 +84,7 @@ productsRouter.get('/:id', async (req: Request, res: Response) => {
     res.status(404).json({ error: 'product not found' });
     return;
   }
-  res.json(toProduct(rows[0]));
+  res.json({ ...toProduct(rows[0]), ...(await ratingSummary(rows[0].id)) });
 });
 
 productsRouter.post('/', requireAuth, requireAdmin, async (req: AuthedRequest, res: Response) => {
